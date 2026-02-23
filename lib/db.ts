@@ -2,51 +2,50 @@ import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error(
-    "Please define the MONGODB_URI environment variable inside .env.local"
-  );
-}
-
 interface MongooseCache {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
+conn: typeof mongoose | null;
+promise: Promise<typeof mongoose> | null;
 }
 
-// Extend global so that cached connection survives hot reloads in Next.js
 declare global {
-  // eslint-disable-next-line no-var
-  var mongoose: MongooseCache | undefined;
+var mongoose: MongooseCache | undefined;
 }
 
-// Use existing cached connection if available
 let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 
 if (!global.mongoose) {
-  global.mongoose = cached;
+global.mongoose = cached;
 }
 
 async function connectDB() {
-  if (cached.conn) {
-    return cached.conn;
-  }
+if (!MONGODB_URI) {
+    throw new Error(
+    "Please define the MONGODB_URI environment variable inside .env"
+    );
+}
 
-  if (!cached.promise) {
+if (cached.conn) {
+    return cached.conn;
+}
+
+if (!cached.promise) {
     const opts = {
-      bufferCommands: false, // prevents mongoose from buffering commands before connection
+    bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => mongoose);
-  }
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    return mongoose;
+    });
+}
 
-  try {
+try {
     cached.conn = await cached.promise;
-  } catch (e) {
+} catch (e) {
     cached.promise = null;
     throw e;
-  }
+}
 
-  return cached.conn;
+return cached.conn;
 }
 
 export default connectDB;
